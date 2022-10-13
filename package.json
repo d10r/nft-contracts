@@ -1,0 +1,24 @@
+{
+    "name": "nft-contracts",
+    "version": "1.0.0",
+    "description": "ERC721 contracts related to the Superfluid protocol",
+    "scripts": {
+        "build": "hardhat compile",
+        "test": "hardhat test",
+        "dev": "nodemon -w contracts -w test -x hardhat test"
+    },
+    "author": "Superfluid",
+    "license": "MIT",
+    "dependencies": {
+        "@nomicfoundation/hardhat-chai-matchers": "^1.0.4",
+        "@nomiclabs/hardhat-ethers": "^2.2.0",
+        "@openzeppelin/contracts": "^4.7.3",
+        "@superfluid-finance/ethereum-contracts": "^1.4.1",
+        "@superfluid-finance/sdk-core": "^0.5.6",
+        "chai": "^4.3.6",
+        "dotenv": "^16.0.3",
+        "ethers": "^5.7.1",
+        "hardhat": "^2.12.0",
+        "mocha": "^10.0.0"
+    }
+}
