@@ -40,6 +40,6 @@ describe("FlowNFT", function () {
 
         // This is supposed to be set, see https://docs.ethers.io/v5/api/contract/contract/#contract-functionsSend
         // But the logs seem to not be parsed by ethers
-        console.log("createTx events[0].name: ", JSON.stringify(await receipt.events[0].name, null, 2));
+        console.log("createTx events[0].event: ", JSON.stringify(await receipt.events[0].event, null, 2));
     });
 })
