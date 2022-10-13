@@ -11,48 +11,53 @@ import { ISuperfluidToken } from "@superfluid-finance/ethereum-contracts/contrac
 /*
 * NFT representing a flow that points to offchain data, created by CFAv1 hook or manual minting
 */
-
 contract FlowNFT is IConstantFlowAgreementHook {
 
     using Strings for uint256;
 
-    struct StreamData {
+    struct FlowData {
         address token;
-        uint64 startDate;
         address sender;
+        address receiver;
+        uint64 startDate;
     }
 
-    error NOT_ALLOWED();
+    /// thrown by methods not available, e.g. transfer
+    error NOT_AVAILABLE();
+
+    /// thrown when attempting to mint an NFT which already exists
     error ALREADY_MINTED();
-    error NOT_MINTED();
+
+    /// thrown when looking up a token or flow which doesn't exist
+    error NOT_EXISTS();
+
+    /// thrown when trying to mint to the zero address
     error ZERO_ADDRESS();
-    error EMPTY_DATA();
-    error NOT_STREAM_USER();
 
     event Transfer(address indexed from, address indexed to, uint256 indexed id);
 
     string public name;
     string public symbol;
-    string public url;
+    string public baseUrl = "https://superfluid-nft.netlify.app/.netlify/functions/getmeta";
     IConstantFlowAgreementV1 public cfaV1;
-    uint256 private _tokenIds;
-    mapping(uint256 => StreamData) internal _tokenCFAData;
-    mapping(bytes32 => uint256) internal _revertStreamToId;
-    mapping(uint256 => address) internal _ownerOf;
+    uint256 public tokenIds;
+    mapping(uint256 => FlowData) internal _flowDataById;
+    mapping(bytes32 => uint256) internal _idByFlowKey;
+    //mapping(uint256 => address) internal _ownerOf;
 
     function tokenURI(uint256 id) public view returns (string memory) {
-        StreamData memory stream = _tokenCFAData[id];
+        FlowData memory flowData = _flowDataById[id];
 
         address receiver = ownerOf(id);
-        if(receiver == address(0)) return "";
         return string(abi.encodePacked(
-                url,
-                'token_symbol=', ISuperToken(stream.token).symbol(),
-                '&token_decimals=', uint256(ISuperToken(stream.token).decimals()).toString(),
-                '&sender=', Strings.toHexString(uint256(uint160(stream.sender)), 20),
-                '&receiver=', Strings.toHexString(uint256(uint160(receiver)), 20),
-                '&flowRate=',uint256(uint96(_getFlowRate(stream.token, stream.sender, receiver))).toString(),
-                '&start_date=',uint256(stream.startDate).toString()
+            baseUrl,
+            '?token=', Strings.toHexString(uint256(uint160(flowData.token)), 20),
+            '&token_symbol=', ISuperToken(flowData.token).symbol(),
+            '&token_decimals=', uint256(ISuperToken(flowData.token).decimals()).toString(),
+            '&sender=', Strings.toHexString(uint256(uint160(flowData.sender)), 20),
+            '&receiver=', Strings.toHexString(uint256(uint160(receiver)), 20),
+            '&flowRate=',uint256(uint96(_getFlowRate(flowData.token, flowData.sender, receiver))).toString(),
+            '&start_date=',uint256(flowData.startDate).toString()
         ));
     }
 
@@ -65,8 +70,8 @@ contract FlowNFT is IConstantFlowAgreementHook {
     // ============= IConstantFlowAgreementHook interface =============
 
     function onCreate(ISuperfluidToken token, CFAHookParams memory newFlowData) public returns(bool) {
-        _tokenIds++;
-        _mint(_tokenIds, address(token), newFlowData.sender, newFlowData.receiver, uint64(block.timestamp));
+        tokenIds++;
+        _mint(tokenIds, address(token), newFlowData.sender, newFlowData.receiver, uint64(block.timestamp));
         return true;
     }
 
@@ -82,39 +87,41 @@ contract FlowNFT is IConstantFlowAgreementHook {
     // ============= ERC721 interface =============
 
     function ownerOf(uint256 id) public view virtual returns (address owner) {
-        owner = _ownerOf[id];
-        if(owner == address(0)) revert NOT_MINTED();
+        owner = _flowDataById[id].receiver;
+        if(owner == address(0)) revert NOT_EXISTS();
     }
 
+    // TODO: is this safe? Avoids more storage.
     function balanceOf(address owner) public view virtual returns (uint256) {
         return 1;
     }
 
+    // ERC165
     function supportsInterface(bytes4 interfaceId) public view virtual returns (bool) {
         return
-        interfaceId == 0x01ffc9a7 || // ERC165 Interface ID for ERC165
-        interfaceId == 0x80ac58cd || // ERC165 Interface ID for ERC721
-        interfaceId == 0x5b5e139f; // ERC165 Interface ID for ERC721Metadata
+            interfaceId == 0x01ffc9a7 || // Interface ID for ERC165
+            interfaceId == 0x80ac58cd || // Interface ID for ERC721
+            interfaceId == 0x5b5e139f; // Interface ID for ERC721Metadata
     }
 
     function approve(address spender, uint256 id) public {
-        revert NOT_ALLOWED();
+        revert NOT_AVAILABLE();
     }
 
     function setApprovalForAll(address operator, bool approved) public {
-        revert NOT_ALLOWED();
+        revert NOT_AVAILABLE();
     }
 
     function transferFrom(address from,address to,uint256 id) public {
-        revert NOT_ALLOWED();
+        revert NOT_AVAILABLE();
     }
 
     function safeTransferFrom(address from,address to,uint256 id) public {
-        revert NOT_ALLOWED();
+        revert NOT_AVAILABLE();
     }
 
     function safeTransferFrom(address from, address to, uint256 id,bytes calldata data) public {
-        revert NOT_ALLOWED();
+        revert NOT_AVAILABLE();
     }
 
     function _getFlowRate(address token, address sender, address receiver) internal view returns(int96 flowRate) {
@@ -125,39 +132,41 @@ contract FlowNFT is IConstantFlowAgreementHook {
 
     function _mint(uint256 id, address token, address sender, address receiver, uint64 startDate) internal {
         if(receiver == address(0)) revert ZERO_ADDRESS();
-        bytes32 reverseKey = keccak256(abi.encodePacked(
+        bytes32 flowKey = keccak256(abi.encodePacked(
                 token,
                 sender,
                 receiver
             ));
-        if(_revertStreamToId[reverseKey] != 0) revert ALREADY_MINTED();
-        if(_ownerOf[id] != address(0)) revert ALREADY_MINTED();
-        _ownerOf[id] = receiver;
-        _tokenCFAData[id] = StreamData(token, startDate, sender);
-        _revertStreamToId[reverseKey] = id;
+        if(_idByFlowKey[flowKey] != 0) revert ALREADY_MINTED();
+        if(_flowDataById[id].receiver != address(0)) revert ALREADY_MINTED();
+        _flowDataById[id] = FlowData(token, sender, receiver, startDate);
+        _idByFlowKey[flowKey] = id;
         emit Transfer(address(0), receiver, id);
     }
 
     function _burn(address token, address sender, address receiver) internal {
-        bytes32 reverseKey = keccak256(abi.encodePacked(token, sender, receiver));
-        uint256 id = _revertStreamToId[reverseKey];
-        if(id == 0) revert NOT_MINTED();
-        delete _ownerOf[id];
-        delete _tokenCFAData[id];
-        delete _revertStreamToId[reverseKey];
+        bytes32 flowKey = keccak256(abi.encodePacked(token, sender, receiver));
+        uint256 id = _idByFlowKey[flowKey];
+        if(id == 0) revert NOT_EXISTS();
+        delete _flowDataById[id];
+        delete _idByFlowKey[flowKey];
         emit Transfer(receiver, address(0), id);
     }
 
-    // ============= TODO: ??? =============
+    // ============= debugging fns TODO: renove =============
 
     function mint(address token, address sender, address receiver)  public {
         int96 flowRate = _getFlowRate(token, sender, receiver);
         if(flowRate > 0) {
-            _tokenIds++;
-            _mint(_tokenIds, token, sender, receiver, uint64(block.timestamp));
+            tokenIds++;
+            _mint(tokenIds, token, sender, receiver, uint64(block.timestamp));
+        } else {
+            revert NOT_EXISTS();
         }
     }
 
+/*
+    error NOT_STREAM_USER();
     function burn(address token, address sender, address receiver) public {
         if(msg.sender != receiver) revert NOT_STREAM_USER();
         int96 flowRate = _getFlowRate(token, sender, receiver);
@@ -165,8 +174,5 @@ contract FlowNFT is IConstantFlowAgreementHook {
             _burn(token, sender, receiver);
         }
     }
-
-    function setUrl(string memory _url) external {
-        url = _url;
-    }
+    */
 }

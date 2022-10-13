@@ -21,31 +21,32 @@ contract CFAv1Mock {
         address sender,
         address receiver,
         address flowOperator,
-        int96 flowRate
+        int96 flowRate,
+        bool invokeHook
     ) 
         external
     {
         fakeFlowRates[keccak256(abi.encode(token, sender, receiver))] = flowRate;
         fakeFlowTs[keccak256(abi.encode(token, sender, receiver))] = block.timestamp;
 
-        hookImplementer.onCreate(
-            token, 
-            IConstantFlowAgreementHook.CFAHookParams({
-                sender: sender,
-                receiver: receiver,
-                flowOperator: flowOperator,
-                flowRate: flowRate
-            })
-        );
+        if (invokeHook) {
+            hookImplementer.onCreate(
+                token, 
+                IConstantFlowAgreementHook.CFAHookParams({
+                    sender: sender,
+                    receiver: receiver,
+                    flowOperator: flowOperator,
+                    flowRate: flowRate
+                })
+            );
+        }
     }
 
     function fakeDeleteFlow(
         ISuperfluidToken token,
         address sender,
         address receiver,
-        address flowOperator,
-        int96 flowRate,
-        int96 oldFlowRate
+        address flowOperator
     ) 
         external
     {
@@ -55,9 +56,9 @@ contract CFAv1Mock {
                 sender: sender,
                 receiver: receiver,
                 flowOperator: flowOperator,
-                flowRate: flowRate
+                flowRate: 0
             }),
-            oldFlowRate
+            fakeFlowRates[keccak256(abi.encode(token, sender, receiver))]
         );
 
         fakeFlowRates[keccak256(abi.encode(token, sender, receiver))] = 0;
