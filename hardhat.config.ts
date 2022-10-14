@@ -1,7 +1,8 @@
-require("@nomiclabs/hardhat-ethers");
-require("@nomicfoundation/hardhat-chai-matchers");
-require("hardhat-gas-reporter");
-require("dotenv").config();
+import "@nomiclabs/hardhat-ethers";
+import "@nomicfoundation/hardhat-chai-matchers";
+import "hardhat-gas-reporter";
+import { config, config as dotenvConfig } from "dotenv";
+dotenvConfig();
 
 /** @type import('hardhat/config').HardhatUserConfig */
 module.exports = {
@@ -14,3 +15,5 @@ module.exports = {
     apiKey: process.env.ETHERSCAN_API_KEY
   }
 };
+
+export default config;
