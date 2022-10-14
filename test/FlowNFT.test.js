@@ -53,7 +53,7 @@ describe("FlowNFT", function () {
 
         const uri = await flowNFT.tokenURI(tokId);
         console.log("uri", uri);
-        checkURI(uri);
+        checkURI(uri, token1.address, sender.address, receiver.address);
 
         // timestamp...
         //expect(uri).to.equal("https://superfluid-nft.netlify.app/.netlify/functions/getmeta?token_symbol=MCK&token_decimals=18&sender=0x70997970c51812dc3a010c7d01b50e0d17dc79c8&receiver=0x3c44cdddb6a900fa2b585dd299e03d12fa4293bc&flowRate=1000&start_date=1665683687");
@@ -142,11 +142,13 @@ describe("FlowNFT", function () {
 
 
     const BASE_URL = "https://superfluid-nft.netlify.app";
-    function checkURI(uriStr, token, sender, receiver, startDate = 0) {
+    function checkURI(uriStr, tokenAddr, senderAddr, receiverAddr, startDate = 0) {
         const url = new URL(uriStr);
         const params = url.searchParams;
+        console.log("params", params);
+        console.log("params.token", params.token);
         expect(url.origin).to.be.equal(BASE_URL);
-        //expect(params.token).to.be.equal(token.address);
+        expect(params.get("token").toLowerCase()).to.be.equal(tokenAddr.toLowerCase());
     }
 
     /* test cases:
