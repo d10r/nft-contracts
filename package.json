@@ -13,7 +13,7 @@
         "@nomicfoundation/hardhat-chai-matchers": "^1.0.4",
         "@nomiclabs/hardhat-ethers": "^2.2.0",
         "@openzeppelin/contracts": "^4.7.3",
-        "@superfluid-finance/ethereum-contracts": "^1.4.1",
+        "@superfluid-finance/ethereum-contracts": "../protocol-monorepo/packages/ethereum-contracts/",
         "@superfluid-finance/sdk-core": "^0.5.6",
         "@types/chai": "^4.3.3",
         "@types/mocha": "^10.0.0",

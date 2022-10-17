@@ -3,7 +3,7 @@
 pragma solidity ^0.8.0;
 
 import { ISuperfluidToken } from "@superfluid-finance/ethereum-contracts/contracts/interfaces/superfluid/ISuperfluid.sol";
-import { IConstantFlowAgreementHook } from "../IConstantFlowAgreementHook.sol";
+import { IConstantFlowAgreementHook } from "@superfluid-finance/ethereum-contracts/contracts/interfaces/agreements/IConstantFlowAgreementHook.sol";
 
 // Allows invocation of the hooks
 contract CFAv1Mock {
