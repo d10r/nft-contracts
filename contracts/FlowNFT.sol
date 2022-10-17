@@ -45,7 +45,6 @@ contract FlowNFT is IConstantFlowAgreementHook {
 
     mapping(uint256 => FlowData) internal _flowDataById;
     mapping(bytes32 => uint256) internal _idByFlowKey;
-    mapping(address => uint256) internal _balances;
 
     IConstantFlowAgreementV1 internal _cfaV1;
 
@@ -106,9 +105,10 @@ contract FlowNFT is IConstantFlowAgreementHook {
         ));
     }
 
+    // always returns 1 in order to not waste storage
     function balanceOf(address owner) public view virtual returns (uint256) {
         if(owner == address(0)) revert ZERO_ADDRESS();
-        return _balances[owner];
+        return 1;
     }
 
     // ERC165 Interface Detection
@@ -150,7 +150,6 @@ contract FlowNFT is IConstantFlowAgreementHook {
             ));
         if(_idByFlowKey[flowKey] != 0) revert ALREADY_MINTED();
         if(_flowDataById[id].receiver != address(0)) revert ALREADY_MINTED();
-        _balances[receiver] += 1;
         _flowDataById[id] = FlowData(token, sender, receiver, startDate);
         _idByFlowKey[flowKey] = id;
         emit Transfer(address(0), receiver, id);
@@ -160,7 +159,6 @@ contract FlowNFT is IConstantFlowAgreementHook {
         bytes32 flowKey = keccak256(abi.encodePacked(token, sender, receiver));
         uint256 id = _idByFlowKey[flowKey];
         if(id == 0) revert NOT_EXISTS();
-        _balances[receiver] -= 1;
         delete _flowDataById[id];
         delete _idByFlowKey[flowKey];
         emit Transfer(receiver, address(0), id);
