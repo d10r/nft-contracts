@@ -12,6 +12,7 @@
     "dependencies": {
         "@nomicfoundation/hardhat-chai-matchers": "^1.0.4",
         "@nomiclabs/hardhat-ethers": "^2.2.0",
+        "@nomiclabs/hardhat-etherscan": "^3.1.1",
         "@openzeppelin/contracts": "^4.7.3",
         "@superfluid-finance/ethereum-contracts": "../protocol-monorepo/packages/ethereum-contracts/",
         "@superfluid-finance/sdk-core": "^0.5.6",
