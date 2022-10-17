@@ -8,7 +8,23 @@ describe("FlowNFT", function () {
 
     let sender, receiver, operator;
     let token1, token2, cfaMock, flowNFT;
-  
+
+    const BASE_URL = "https://nft.superfluid.finance";
+    function checkURI(uriStr, tokenAddr, senderAddr, receiverAddr, startDateSet) {
+        const url = new URL(uriStr);
+        const params = url.searchParams;
+        console.log("params", params);
+        console.log("params.token", params.token);
+        expect(url.origin).to.be.equal(BASE_URL);
+        expect(params.get("token").toLowerCase()).to.be.equal(tokenAddr.toLowerCase());
+
+        if(startDateSet) {
+            expect(params.get("start_date")).to.exist;
+        } else {
+            expect(params.get("start_date")).to.be.null;
+        }
+    }
+
     before(async function () {
       [sender, receiver, operator] = await ethers.getSigners(3);
       FlowNFT = await ethers.getContractFactory("FlowNFT");
@@ -40,7 +56,7 @@ describe("FlowNFT", function () {
         //console.log("createTx events[0].event: ", JSON.stringify(await receipt.events[0].event, null, 2));
 
         // TODO: hack to get the tokenId - should parse the Transfer event instead
-        const tokId = await flowNFT.tokenIds();
+        const tokId = await flowNFT.tokenCnt();
         console.log("NFT created with id", tokId);
 
         await expect(createTx)
@@ -51,18 +67,18 @@ describe("FlowNFT", function () {
         console.log("owner after mint", owner);
         expect(owner).to.be.equal(receiver.address);
 
+        const bal = await flowNFT.balanceOf(receiver.address);
+        expect(bal).to.be.equal(1);
+
         const uri = await flowNFT.tokenURI(tokId);
         console.log("uri", uri);
-        checkURI(uri, token1.address, sender.address, receiver.address);
-
-        // timestamp...
-        //expect(uri).to.equal("https://superfluid-nft.netlify.app/.netlify/functions/getmeta?token_symbol=MCK&token_decimals=18&sender=0x70997970c51812dc3a010c7d01b50e0d17dc79c8&receiver=0x3c44cdddb6a900fa2b585dd299e03d12fa4293bc&flowRate=1000&start_date=1665683687");
+        checkURI(uri, token1.address, sender.address, receiver.address, true);
     });
 
     it("mint NFT to receiver by operator on create hook", async function () {
         const createTx = cfaMock.fakeCreateFlow(token1.address, sender.address, receiver.address, operator.address, 1e9, true);
 
-        const tokId = await flowNFT.tokenIds();
+        const tokId = await flowNFT.tokenCnt();
         console.log("NFT created with id", tokId);
 
         await expect(createTx)
@@ -75,6 +91,8 @@ describe("FlowNFT", function () {
 
         const uri = await flowNFT.tokenURI(tokId);
         console.log("uri", uri);
+
+        checkURI(uri, token1.address, sender.address, receiver.address, true);
     });
 
     it("mint NFT to receiver by manual hook", async function () {
@@ -93,7 +111,7 @@ describe("FlowNFT", function () {
             .to.be.revertedWithCustomError(flowNFT, "ALREADY_MINTED");
 
         // TODO: hack to get the tokenId - should parse the Transfer event instead
-        const tokId = await flowNFT.tokenIds();
+        const tokId = await flowNFT.tokenCnt();
         console.log("NFT created with id", tokId);
 
         await expect(mintTx)
@@ -110,19 +128,27 @@ describe("FlowNFT", function () {
         const uri = await flowNFT.tokenURI(tokId);
         console.log("uri", uri);
 
-        // timestamp...
-        //expect(uri).to.equal("https://superfluid-nft.netlify.app/.netlify/functions/getmeta?token_symbol=MCK&token_decimals=18&sender=0x70997970c51812dc3a010c7d01b50e0d17dc79c8&receiver=0x3c44cdddb6a900fa2b585dd299e03d12fa4293bc&flowRate=1000&start_date=1665683687");
+        checkURI(uri, token1.address, sender.address, receiver.address, false);
     });
 
     it("burn NFT on delete hook", async function () {
         await cfaMock.fakeCreateFlow(token1.address, sender.address, receiver.address, sender.address, 1e9, true);
 
         // TODO: hack to get the tokenId - should parse the Transfer event instead
-        const tokId = await flowNFT.tokenIds();
+        const tokId = await flowNFT.tokenCnt();
         const o1 = await flowNFT.ownerOf(tokId);
         console.log("owner after mint", o1);
 
+        // mint a second, unrelated NFT and see if balanceOf accounts for correctly
+        await cfaMock.fakeCreateFlow(token2.address, sender.address, receiver.address, sender.address, 1e9, true);
+        const bal1 = await flowNFT.balanceOf(receiver.address);
+        expect(bal1).to.be.equal(2);
+
         await cfaMock.fakeDeleteFlow(token1.address, sender.address, receiver.address, sender.address);
+
+        const bal2 = await flowNFT.balanceOf(receiver.address);
+        expect(bal2).to.be.equal(1);
+
         await expect(flowNFT.ownerOf(tokId)).to.be.revertedWithCustomError(flowNFT, "NOT_EXISTS");
         await expect(flowNFT.tokenURI(tokId)).to.be.revertedWithCustomError(flowNFT, "NOT_EXISTS");
     });
@@ -131,7 +157,7 @@ describe("FlowNFT", function () {
         await cfaMock.fakeCreateFlow(token1.address, sender.address, receiver.address, sender.address, 1e9, true);
 
         // TODO: hack to get the tokenId - should parse the Transfer event instead
-        const tokId = await flowNFT.tokenIds();
+        const tokId = await flowNFT.tokenCnt();
         const o1 = await flowNFT.ownerOf(tokId);
         console.log("owner after mint", o1);
 
@@ -139,24 +165,4 @@ describe("FlowNFT", function () {
         await expect(flowNFT.ownerOf(tokId)).to.be.revertedWithCustomError(flowNFT, "NOT_EXISTS");
         await expect(flowNFT.tokenURI(tokId)).to.be.revertedWithCustomError(flowNFT, "NOT_EXISTS");
     });
-
-
-    const BASE_URL = "https://superfluid-nft.netlify.app";
-    function checkURI(uriStr, tokenAddr, senderAddr, receiverAddr, startDate = 0) {
-        const url = new URL(uriStr);
-        const params = url.searchParams;
-        console.log("params", params);
-        console.log("params.token", params.token);
-        expect(url.origin).to.be.equal(BASE_URL);
-        expect(params.get("token").toLowerCase()).to.be.equal(tokenAddr.toLowerCase());
-    }
-
-    /* test cases:
-    * X create mints an NFT
-    * X correct owner set
-    * X delete burns the NFT
-    * correct URI
-    * manual minting: no start_date set
-    * X ACL (flowOperator != sender): correct sender set
-    */
 })
