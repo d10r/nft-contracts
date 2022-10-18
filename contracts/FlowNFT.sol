@@ -3,7 +3,6 @@
 pragma solidity ^0.8.0;
 
 import { Strings } from "@openzeppelin/contracts/utils/Strings.sol";
-import { Base64 } from "@openzeppelin/contracts/utils/Base64.sol";
 import { IConstantFlowAgreementV1 } from "@superfluid-finance/ethereum-contracts/contracts/interfaces/agreements/IConstantFlowAgreementV1.sol";
 import { ISuperfluid, ISuperToken } from "@superfluid-finance/ethereum-contracts/contracts/interfaces/superfluid/ISuperfluid.sol";
 
@@ -53,7 +52,7 @@ contract FlowNFT is IConstantFlowAgreementHook {
     mapping(uint256 => FlowData) internal _flowDataById;
     mapping(bytes32 => uint256) internal _idByFlowKey;
 
-    IConstantFlowAgreementV1 internal _cfaV1;
+    IConstantFlowAgreementV1 immutable internal _cfaV1;
 
     constructor(address cfa_, string memory name_, string memory symbol_) {
         name = name_;
@@ -66,8 +65,7 @@ contract FlowNFT is IConstantFlowAgreementHook {
     function mint(address token, address sender, address receiver) public returns(bool) {
         int96 flowRate = _getFlowRate(token, sender, receiver);
         if(flowRate > 0) {
-            tokenCnt++;
-            _mint(tokenCnt, token, sender, receiver, 0);
+            _mint(token, sender, receiver, 0);
             return true;
         } else {
             revert NOT_EXISTS();
@@ -102,8 +100,7 @@ contract FlowNFT is IConstantFlowAgreementHook {
     // ============= IConstantFlowAgreementHook interface =============
 
     function onCreate(ISuperfluidToken token, CFAHookParams memory newFlowData) public returns(bool) {
-        tokenCnt++;
-        _mint(tokenCnt, address(token), newFlowData.sender, newFlowData.receiver, uint64(block.timestamp));
+        _mint(address(token), newFlowData.sender, newFlowData.receiver, uint64(block.timestamp));
         return true;
     }
 
@@ -177,8 +174,9 @@ contract FlowNFT is IConstantFlowAgreementHook {
 
     // ============= private interface =============
 
-    function _mint(uint256 id, address token, address sender, address receiver, uint64 startDate) internal {
+    function _mint(address token, address sender, address receiver, uint64 startDate) internal {
         if(receiver == address(0)) revert ZERO_ADDRESS();
+        uint256 id = ++tokenCnt;
         bytes32 flowKey = keccak256(abi.encodePacked(
                 token,
                 sender,
