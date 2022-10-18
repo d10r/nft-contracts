@@ -12,16 +12,8 @@ import { ISuperfluidToken } from "@superfluid-finance/ethereum-contracts/contrac
 
 /*
 * NFT representing a flow that points to offchain data, created by CFAv1 hook or manual minting.
-* The existence of a CFA flow doesn't guarantee the existence of a representing token,
-* also a token may still exist after a flow has stopped.
-* That's because the hooks are best-effort and allowed to fail e.g. if not enough gas was provided.
+* The existence of a CFA flow doesn't guarantee the existence of a representing token.
 * There's a mint method which allows anybody to retroactively mint a token for an existing flow.
-* Token owners (flow receivers) can anytime burn their token.
-* Tokens representing a stopped flow can be recognized by their zero flowrate.
-* If a flow is created again with a token for the previous flow (same token, sender, receiver)
-* still existing, that token represents the new flow.
-* Thus a flow with the same flowId (create -> delete -> create) may be represented by the same
-* (if the token wasn't burned) or by a different (if the token was burned) token.
 */
 contract FlowNFT is IConstantFlowAgreementHook {
 
@@ -46,8 +38,8 @@ contract FlowNFT is IConstantFlowAgreementHook {
     /// thrown when trying to mint to the zero address
     error ZERO_ADDRESS();
 
-    /// thrown if a msg.sender doesn't have permission to execute an operation
-    error NO_PERMISSION();
+    // thrown when trying to burn a token representing an ongoing flow
+    error FLOW_ONGOING();
 
     event Transfer(address indexed from, address indexed to, uint256 indexed id);
 
@@ -71,26 +63,33 @@ contract FlowNFT is IConstantFlowAgreementHook {
 
     /// Allows retroactive minting to flow receivers if minting wasn't done via the hook.
     /// Can be triggered by anybody.
-    function mint(address token, address sender, address receiver) public {
+    function mint(address token, address sender, address receiver) public returns(bool) {
         int96 flowRate = _getFlowRate(token, sender, receiver);
         if(flowRate > 0) {
             tokenCnt++;
             _mint(tokenCnt, token, sender, receiver, 0);
+            return true;
         } else {
             revert NOT_EXISTS();
         }
     }
 
-    /// Allows flow receivers to burn their NFTs
-    function burn(address token, address sender, address receiver) public {
-        if(msg.sender != receiver) revert NO_PERMISSION();
-        _burn(token, sender, receiver);
+    /// Allows tokens not "covered" by an active flow to be burned
+    function burn(address token, address sender, address receiver) public returns(bool) {
+        // revert if no token exists
+        getTokenId(token, sender, receiver);
+        if(_getFlowRate(token, sender, receiver) == 0) {
+            _burn(token, sender, receiver);
+            return true;
+        } else {
+            revert FLOW_ONGOING();
+        }
     }
 
     /// returns the token id representing the given flow
     /// reverts if no token exist
     /// note that this method doesn't check if an actual flow currently exists for this params (flowrate != 0)
-    function getTokenId(address token, address sender, address receiver) external view returns(uint256 tokenId) {
+    function getTokenId(address token, address sender, address receiver) public view returns(uint256 tokenId) {
         bytes32 flowKey = keccak256(abi.encodePacked(
                 token,
                 sender,

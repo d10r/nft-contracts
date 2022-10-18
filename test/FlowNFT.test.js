@@ -165,7 +165,7 @@ describe("FlowNFT", function () {
         await expect(flowNFT.tokenURI(tokId)).to.be.revertedWithCustomError(flowNFT, "NOT_EXISTS");
     });
 
-    it("burn NFT by receiver (owner)", async function () {
+    it("can burn NFT if flowrate 0", async function () {
         // no flow yet -> no NFT yet: revert
         await expect(flowNFT.connect(receiver).burn(token1.address, sender.address, receiver.address))
             .to.be.revertedWithCustomError(flowNFT, "NOT_EXISTS");
@@ -177,19 +177,17 @@ describe("FlowNFT", function () {
 
         await flowNFT.mint(token1.address, sender.address, receiver.address);
 
-        // NFT now exists, trying to burn NFT by 3rd party: revert
+        // NFT now exists, trying to burn NFT
         await expect(flowNFT.burn(token1.address, sender.address, receiver.address))
-            .to.be.revertedWithCustomError(flowNFT, "NO_PERMISSION");
+            .to.be.revertedWithCustomError(flowNFT, "FLOW_ONGOING");
 
-        await flowNFT.connect(receiver).burn(token1.address, sender.address, receiver.address);
+        await cfaMock.fakeDeleteFlow(token1.address, sender.address, receiver.address, sender.address, false);
 
-        // already burned: revert
-        await expect(flowNFT.connect(receiver).burn(token1.address, sender.address, receiver.address))
-            .to.be.revertedWithCustomError(flowNFT, "NOT_EXISTS");
+        // with the flow stopped, the NFT can be burned
+        await flowNFT.burn(token1.address, sender.address, receiver.address);
 
         await expect(flowNFT.getTokenId(token1.address, sender.address, receiver.address))
             .to.be.revertedWithCustomError(flowNFT, "NOT_EXISTS");
-        //await cfaMock.fakeDeleteFlow(token1.address, sender.address, receiver.address, sender.address, false);
     });
 
     it("create -> delete (no burn) -> create flow: keep same NFT", async function () {
