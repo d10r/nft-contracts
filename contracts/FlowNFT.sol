@@ -1,3 +1,5 @@
+// SPDX-License-Identifier: MIT
+
 pragma solidity ^0.8.0;
 
 import { Strings } from "@openzeppelin/contracts/utils/Strings.sol";
@@ -106,7 +108,7 @@ contract FlowNFT is IConstantFlowAgreementHook {
         return true;
     }
 
-    function onUpdate(ISuperfluidToken /*token*/, CFAHookParams memory /*updatedFlowData*/, int96 /*oldFlowRate*/) public returns(bool) {
+    function onUpdate(ISuperfluidToken /*token*/, CFAHookParams memory /*updatedFlowData*/, int96 /*oldFlowRate*/) public pure returns(bool) {
         return true;
     }
 
@@ -153,23 +155,23 @@ contract FlowNFT is IConstantFlowAgreementHook {
             interfaceId == 0x5b5e139f; // Interface ID for ERC721Metadata
     }
 
-    function approve(address /*spender*/, uint256 /*id*/) public {
+    function approve(address /*spender*/, uint256 /*id*/) public pure {
         revert NOT_AVAILABLE();
     }
 
-    function setApprovalForAll(address /*operator*/, bool /*approved*/) public {
+    function setApprovalForAll(address /*operator*/, bool /*approved*/) public pure {
         revert NOT_AVAILABLE();
     }
 
-    function transferFrom(address /*from*/, address /*to*/, uint256 /*id*/) public {
+    function transferFrom(address /*from*/, address /*to*/, uint256 /*id*/) public pure {
         revert NOT_AVAILABLE();
     }
 
-    function safeTransferFrom(address /*from*/, address /*to*/, uint256 /*id*/) public {
+    function safeTransferFrom(address /*from*/, address /*to*/, uint256 /*id*/) public pure {
         revert NOT_AVAILABLE();
     }
 
-    function safeTransferFrom(address /*from*/, address /*to*/, uint256 /*id*/, bytes calldata /*data*/) public {
+    function safeTransferFrom(address /*from*/, address /*to*/, uint256 /*id*/, bytes calldata /*data*/) public pure {
         revert NOT_AVAILABLE();
     }
 
