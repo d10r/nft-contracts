@@ -91,11 +91,7 @@ describe("FlowNFT", function () {
         checkURI(uri, token1.address, sender.address, receiver.address, true);
     });
 
-    it("mint NFT to receiver by manual hook", async function () {
-        // can't mint for a non-existing flow
-        await expect(flowNFT.mint(token1.address, sender.address, receiver.address))
-            .to.be.revertedWithCustomError(flowNFT, "NOT_EXISTS");
-
+    it("mint NFT to receiver directly (without hook)", async function () {
         // flow is created without invoking the hook
         await cfaMock.fakeCreateFlow(token1.address, sender.address, receiver.address, sender.address, 1e9, false);
 
@@ -127,6 +123,11 @@ describe("FlowNFT", function () {
         checkURI(uri, token1.address, sender.address, receiver.address, false);
     });
 
+    it("can't mint without flow", async function () {
+        await expect(flowNFT.mint(token1.address, sender.address, receiver.address))
+            .to.be.revertedWithCustomError(flowNFT, "NOT_EXISTS");
+    });
+
     it("burn NFT on delete hook", async function () {
         await cfaMock.fakeCreateFlow(token1.address, sender.address, receiver.address, sender.address, 1e9, true);
 
@@ -141,7 +142,7 @@ describe("FlowNFT", function () {
         expect(bal1).to.be.equal(2);
         */
 
-        await cfaMock.fakeDeleteFlow(token1.address, sender.address, receiver.address, sender.address);
+        await cfaMock.fakeDeleteFlow(token1.address, sender.address, receiver.address, sender.address, true);
 
         /*const bal2 = await flowNFT.balanceOf(receiver.address);
         expect(bal2).to.be.equal(1);
@@ -159,8 +160,63 @@ describe("FlowNFT", function () {
         const o1 = await flowNFT.ownerOf(tokId);
         console.log("owner after mint", o1);
 
-        await cfaMock.fakeDeleteFlow(token1.address, sender.address, receiver.address, operator.address);
+        await cfaMock.fakeDeleteFlow(token1.address, sender.address, receiver.address, operator.address, true);
         await expect(flowNFT.ownerOf(tokId)).to.be.revertedWithCustomError(flowNFT, "NOT_EXISTS");
         await expect(flowNFT.tokenURI(tokId)).to.be.revertedWithCustomError(flowNFT, "NOT_EXISTS");
+    });
+
+    it("burn NFT by receiver (owner)", async function () {
+        // no flow yet -> no NFT yet: revert
+        await expect(flowNFT.connect(receiver).burn(token1.address, sender.address, receiver.address))
+            .to.be.revertedWithCustomError(flowNFT, "NOT_EXISTS");
+
+        await cfaMock.fakeCreateFlow(token1.address, sender.address, receiver.address, sender.address, 1e9, false);
+        // flow exists, but no NFT minted: revert
+        await expect(flowNFT.connect(receiver).burn(token1.address, sender.address, receiver.address))
+            .to.be.revertedWithCustomError(flowNFT, "NOT_EXISTS");
+
+        await flowNFT.mint(token1.address, sender.address, receiver.address);
+
+        // NFT now exists, trying to burn NFT by 3rd party: revert
+        await expect(flowNFT.burn(token1.address, sender.address, receiver.address))
+            .to.be.revertedWithCustomError(flowNFT, "NO_PERMISSION");
+
+        await flowNFT.connect(receiver).burn(token1.address, sender.address, receiver.address);
+
+        // already burned: revert
+        await expect(flowNFT.connect(receiver).burn(token1.address, sender.address, receiver.address))
+            .to.be.revertedWithCustomError(flowNFT, "NOT_EXISTS");
+
+        await expect(flowNFT.getTokenId(token1.address, sender.address, receiver.address))
+            .to.be.revertedWithCustomError(flowNFT, "NOT_EXISTS");
+        //await cfaMock.fakeDeleteFlow(token1.address, sender.address, receiver.address, sender.address, false);
+    });
+
+    it("create -> delete (no burn) -> create flow: keep same NFT", async function () {
+        await cfaMock.fakeCreateFlow(token1.address, sender.address, receiver.address, sender.address, 1e9, true);
+        const tokId1 = await flowNFT.getTokenId(token1.address, sender.address, receiver.address);
+
+        // delete the flow without invoking the burn hook
+        // that can happen because the hook is called in a try/catch block and could e.g. run out of gas
+        await cfaMock.fakeDeleteFlow(token1.address, sender.address, receiver.address, sender.address, false);
+
+        // with the hook active, the hook call would fail.
+        // Since the mock doesn't do this in a try/catch block, we expect a full tx revert here
+        // while in the actual CFA the full tx would still succeed
+        await expect(cfaMock.fakeCreateFlow(token1.address, sender.address, receiver.address, sender.address, 1e9, true))
+            .to.be.revertedWithCustomError(flowNFT, "ALREADY_MINTED");
+
+        const tokId2 = await flowNFT.getTokenId(token1.address, sender.address, receiver.address);
+        expect(tokId1).to.equal(tokId2);
+    });
+
+    it("NFT of stopped flow: show 0 flowrate", async function () {
+        await cfaMock.fakeCreateFlow(token1.address, sender.address, receiver.address, sender.address, 1e9, true);
+        const tokId = await flowNFT.getTokenId(token1.address, sender.address, receiver.address);
+
+        await cfaMock.fakeDeleteFlow(token1.address, sender.address, receiver.address, sender.address, false);
+        const uri = await flowNFT.tokenURI(tokId);
+        console.log("uri", uri);
+        checkURI(uri, token1.address, sender.address, receiver.address, true);
     });
 })

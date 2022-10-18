@@ -9,7 +9,17 @@ import { IConstantFlowAgreementHook } from "@superfluid-finance/ethereum-contrac
 import { ISuperfluidToken } from "@superfluid-finance/ethereum-contracts/contracts/interfaces/superfluid/ISuperfluid.sol";
 
 /*
-* NFT representing a flow that points to offchain data, created by CFAv1 hook or manual minting
+* NFT representing a flow that points to offchain data, created by CFAv1 hook or manual minting.
+* The existence of a CFA flow doesn't guarantee the existence of a representing token,
+* also a token may still exist after a flow has stopped.
+* That's because the hooks are best-effort and allowed to fail e.g. if not enough gas was provided.
+* There's a mint method which allows anybody to retroactively mint a token for an existing flow.
+* Token owners (flow receivers) can anytime burn their token.
+* Tokens representing a stopped flow can be recognized by their zero flowrate.
+* If a flow is created again with a token for the previous flow (same token, sender, receiver)
+* still existing, that token represents the new flow.
+* Thus a flow with the same flowId (create -> delete -> create) may be represented by the same
+* (if the token wasn't burned) or by a different (if the token was burned) token.
 */
 contract FlowNFT is IConstantFlowAgreementHook {
 
@@ -34,11 +44,14 @@ contract FlowNFT is IConstantFlowAgreementHook {
     /// thrown when trying to mint to the zero address
     error ZERO_ADDRESS();
 
+    /// thrown if a msg.sender doesn't have permission to execute an operation
+    error NO_PERMISSION();
+
     event Transfer(address indexed from, address indexed to, uint256 indexed id);
 
     string public name;
     string public symbol;
-    string public baseUrl = "https://nft.superfluid.finance/cfa/v1/getmeta";
+    string public constant baseUrl = "https://nft.superfluid.finance/cfa/v1/getmeta";
 
     // incremented on every new mint and used as tokenId
     uint256 public tokenCnt;
@@ -54,7 +67,8 @@ contract FlowNFT is IConstantFlowAgreementHook {
         _cfaV1 = IConstantFlowAgreementV1(cfa_);
     }
 
-    /// Allows retroactive minting by flow receivers if minting wasn't done via the hook
+    /// Allows retroactive minting to flow receivers if minting wasn't done via the hook.
+    /// Can be triggered by anybody.
     function mint(address token, address sender, address receiver) public {
         int96 flowRate = _getFlowRate(token, sender, receiver);
         if(flowRate > 0) {
@@ -63,6 +77,25 @@ contract FlowNFT is IConstantFlowAgreementHook {
         } else {
             revert NOT_EXISTS();
         }
+    }
+
+    /// Allows flow receivers to burn their NFTs
+    function burn(address token, address sender, address receiver) public {
+        if(msg.sender != receiver) revert NO_PERMISSION();
+        _burn(token, sender, receiver);
+    }
+
+    /// returns the token id representing the given flow
+    /// reverts if no token exist
+    /// note that this method doesn't check if an actual flow currently exists for this params (flowrate != 0)
+    function getTokenId(address token, address sender, address receiver) external view returns(uint256 tokenId) {
+        bytes32 flowKey = keccak256(abi.encodePacked(
+                token,
+                sender,
+                receiver
+            ));
+        tokenId = _idByFlowKey[flowKey];
+        if(tokenId == 0) revert NOT_EXISTS();
     }
 
     // ============= IConstantFlowAgreementHook interface =============
@@ -89,6 +122,7 @@ contract FlowNFT is IConstantFlowAgreementHook {
         if(owner == address(0)) revert NOT_EXISTS();
     }
 
+    /// note that we can't rely on the startDate as a flow may have been deleted and re-crated in the meantime
     function tokenURI(uint256 id) public view returns (string memory) {
         FlowData memory flowData = _flowDataById[id];
 
