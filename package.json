@@ -5,6 +5,7 @@
     "scripts": {
         "build": "hardhat compile",
         "test": "hardhat test",
+        "deploy-to": "scripts/deploy-to-network.sh",
         "dev": "nodemon -w contracts -w test -x hardhat test"
     },
     "author": "Superfluid",

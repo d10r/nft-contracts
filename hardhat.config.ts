@@ -12,20 +12,20 @@ module.exports = {
     hardhat: {},
     avafuji: {
       url: process.env.AVAFUJI_RPC,
-      accounts: [ process.env.AVAFUJI_PK ]
+      accounts: [ process.env.OVERRIDE_PK || process.env.AVAFUJI_PK || process.env.DEFAULT_PK ]
     },
     mumbai: {
       url: process.env.MUMBAI_RPC,
-      accounts: [ process.env.MUMBAI_PK ]
+      accounts: [ process.env.OVERRIDE_PK || process.env.MUMBAI_PK || process.env.DEFAULT_PK ]
     },
     goerli: {
       url: process.env.GOERLI_RPC,
-      accounts: [ process.env.GOERLI_PK ]
+      accounts: [ process.env.OVERRIDE_PK || process.env.GOERLI_PK || process.env.DEFAULT_PK ]
     },
 
     matic: {
       url: process.env.MATIC_RPC,
-      accounts: [ process.env.MATIC_PK ]
+      accounts: [ process.env.OVERRIDE_PK || process.env.MATIC_PK || process.env.DEFAULT_PK ]
     },
   },
   solidity: {
