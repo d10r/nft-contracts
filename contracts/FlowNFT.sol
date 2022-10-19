@@ -128,7 +128,7 @@ contract FlowNFT is IConstantFlowAgreementHook {
         return string(abi.encodePacked(
             baseUrl,
             '?chain_id=', block.chainid.toString(),
-            '&token=', Strings.toHexString(uint256(uint160(flowData.token)), 20),
+            '&token_address=', Strings.toHexString(uint256(uint160(flowData.token)), 20),
             '&token_symbol=', ISuperToken(flowData.token).symbol(),
             '&token_decimals=', uint256(ISuperToken(flowData.token).decimals()).toString(),
             '&sender=', Strings.toHexString(uint256(uint160(flowData.sender)), 20),
