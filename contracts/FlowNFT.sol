@@ -99,16 +99,16 @@ contract FlowNFT is IConstantFlowAgreementHook {
 
     // ============= IConstantFlowAgreementHook interface =============
 
-    function onCreate(ISuperfluidToken token, CFAHookParams memory newFlowData) public returns(bool) {
+    function onCreate(ISuperfluidToken token, CFAHookParams memory newFlowData) public override returns(bool) {
         _mint(address(token), newFlowData.sender, newFlowData.receiver, uint64(block.timestamp));
         return true;
     }
 
-    function onUpdate(ISuperfluidToken /*token*/, CFAHookParams memory /*updatedFlowData*/, int96 /*oldFlowRate*/) public pure returns(bool) {
+    function onUpdate(ISuperfluidToken /*token*/, CFAHookParams memory /*updatedFlowData*/, int96 /*oldFlowRate*/) public override pure returns(bool) {
         return true;
     }
 
-    function onDelete(ISuperfluidToken token, CFAHookParams memory updatedFlowData, int96 /*oldFlowRate*/) public returns(bool) {
+    function onDelete(ISuperfluidToken token, CFAHookParams memory updatedFlowData, int96 /*oldFlowRate*/) public override returns(bool) {
         _burn(address(token), updatedFlowData.sender, updatedFlowData.receiver);
         return true;
     }
