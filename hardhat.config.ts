@@ -68,7 +68,7 @@ const hardhatConfig = {
 Object.assign(hardhatConfig.networks, ...sfNetworks);
 
 // You may uncomment this in order to print the available networks to console
-console.log("available networks:", Object.keys(hardhatConfig.networks).join(", "));
+//console.log("available networks:", Object.keys(hardhatConfig.networks).join(", "));
 
 module.exports = hardhatConfig;
 
