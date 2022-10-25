@@ -12,7 +12,7 @@ describe("FlowNFT", function () {
         const url = new URL(uriStr);
         const params = url.searchParams;
         console.log("params", params);
-        expect(params.get("token").toLowerCase()).to.be.equal(tokenAddr.toLowerCase());
+        expect(params.get("token_address").toLowerCase()).to.be.equal(tokenAddr.toLowerCase());
 
         if(startDateSet) {
             expect(params.get("start_date")).to.exist;
