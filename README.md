@@ -13,3 +13,7 @@ Example for deploying to Polygon:
 ```
 MATIC_RPC=https://your.rpc MATIC_PK=0x123... yarn deploy-to matic
 ```
+
+## Known bugs
+
+`tokenURI` will append a `0` to the value of `flowRate` if the start date is not set (that is, if `mint()` is not invoked via the hook). Can be worked around by the caller.
