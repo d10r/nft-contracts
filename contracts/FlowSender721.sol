@@ -7,7 +7,7 @@ import { ISuperfluidToken } from "@superfluid-finance/ethereum-contracts/contrac
 
 /*
 * Minimal ERC-721 representation of an outgoing flow.
-* To be deployed specifically for a token, receiver, minFlowrate
+* To be deployed specifically for a token, receiver
 */
 contract FlowSender721 {
 
@@ -22,30 +22,32 @@ contract FlowSender721 {
 
     event Transfer(address indexed from, address indexed to, uint256 indexed id);
 
-    IConstantFlowAgreementV1 immutable public cfaV1;
-    ISuperfluidToken immutable public token;
-    address immutable public receiver;
-    int96 immutable public minFlowrate;
+    IConstantFlowAgreementV1 immutable public CFAv1;
+    ISuperfluidToken immutable public TOKEN;
+    address immutable public RECEIVER;
 
-    constructor(address cfa_, address token_, address receiver_, int96 minFlowrate_) {
-        cfaV1 = IConstantFlowAgreementV1(cfa_);
-        token = ISuperfluidToken(token_);
-        receiver = receiver_;
-        minFlowrate = minFlowrate_;
+    constructor(address cfa_, address token_, address receiver_) {
+        CFAv1 = IConstantFlowAgreementV1(cfa_);
+        TOKEN = ISuperfluidToken(token_);
+        RECEIVER = receiver_;
     }
 
     // ============= ERC721 interface =============
 
-    // interprets the id as sender address, returns itself if flow with minFlowrate exists, reverts otherwise
+    // interprets the id as sender address and minFlowrate concatenated (packed)
+    // returns sender address if such a flow exists, reverts otherwise
     function ownerOf(uint256 id) public view virtual returns (address owner) {
-        if (! _hasToken(address(uint160(id)))) revert NOT_EXISTS();
-        return address(uint160(id));
+        (address sender, int96 minFr) = decodeId(id);
+        if (_getFlowrate(sender) >= minFr) {
+            return sender;
+        }
+        revert NOT_EXISTS();
     }
 
-    // returns 1 if a flow with minFlowrate exists, 0 otherwise
+    // returns the flowrate (0 if no flow) from the sender
     function balanceOf(address owner) public view virtual returns (uint256) {
         if(owner == address(0)) revert ZERO_ADDRESS();
-        return _hasToken(owner) ? 1 : 0;
+        return uint256(uint96(_getFlowrate(owner)));
     }
 
     // ERC165 Interface Detection
@@ -77,8 +79,12 @@ contract FlowSender721 {
 
     // ============= private interface =============
 
-    function _hasToken(address sender) internal view returns(bool) {
-        (,int96 fr,,) = cfaV1.getFlow(token, sender, receiver);
-        return fr >= minFlowrate;
+    function decodeId(uint256 id) public pure returns(address addr, int96 minFr) {
+        addr = address(uint160(bytes20(bytes32(id))));
+        minFr = int96(uint96(bytes12(bytes32(id) << 160)));
+    }
+
+    function _getFlowrate(address sender) internal view returns(int96 flowrate) {
+        (, flowrate,,) = CFAv1.getFlow(TOKEN, sender, RECEIVER);
     }
 }
