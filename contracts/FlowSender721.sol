@@ -79,6 +79,7 @@ contract FlowSender721 {
 
     // ============= private interface =============
 
+    // parses an address an a flowrate packed into a word
     function decodeId(uint256 id) public pure returns(address addr, int96 minFr) {
         addr = address(uint160(bytes20(bytes32(id))));
         minFr = int96(uint96(bytes12(bytes32(id) << 160)));
