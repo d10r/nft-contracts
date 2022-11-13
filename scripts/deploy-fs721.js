@@ -5,7 +5,7 @@
  * - RECEIVER: address of the associated receiver (can be any EOA or contract)
  *
  * Optional ENV vars:
- * - FACTORY: address of the factory contract to be used instead of the preset default
+ * - FACTORY: address of the factory contract to be used. Needed only for devnets
  */
 
 const hre = require("hardhat");

@@ -3,9 +3,10 @@
     "version": "1.0.0",
     "description": "ERC721 contracts related to the Superfluid protocol",
     "scripts": {
+        "list-sf-networks": "cat node_modules/@superfluid-finance/metadata/networks.json | jq '.[].name'",
         "build": "hardhat compile",
         "test": "hardhat test",
-        "deploy-to": "scripts/deploy-to-network.sh",
+        "deploy-flownft-to": "scripts/deploy-flownft-to.sh",
         "dev": "nodemon -w contracts -w test -x hardhat test"
     },
     "author": "Superfluid",

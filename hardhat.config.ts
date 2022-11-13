@@ -6,6 +6,24 @@ import sfMeta from "@superfluid-finance/metadata";
 import { config, config as dotenvConfig } from "dotenv";
 dotenvConfig();
 
+/*
+ * This hardhat config dynamically creates the network list from the Superfluid metadata package.
+ * It adds a field named "sfMeta" to every network in order to give access to metadata
+ * like Superfluid framework contract addresses in hardhat scripts.
+ * It also allows the use of template RPC url's.
+ */
+
+const sfNetworks = sfMeta.networks
+  // uncomment and adapt to your needs in order to include only a subset of networks
+  //.filter(n => ["eth-goerli", "avalanche-fuji"].includes(n.name))
+  .map(n => ({
+    [n.name]: {
+      url: getRpcUrl(n),
+      accounts: getAccounts(n),
+      sfMeta: n
+    }
+  }));
+
 // Returns an RPC URL for the given network.
 function getRpcUrl(n) {
   // If set, a network specific env var is read, else construction from template is attempted, else none set
@@ -18,24 +36,12 @@ function getAccounts(n) {
   return [ process.env.OVERRIDE_PK || process.env[`${n.uppercaseName}_PK`] || process.env.DEFAULT_PK ];
 }
 
-const sfNetworks = sfMeta.networks
-  // uncomment and adapt to your needs in order to include only a subset of networks
-  //.filter(n => ["eth-goerli", "avalanche-fuji"].includes(n.name))
-  .map(n => ({
-    [n.name]: {
-      url: getRpcUrl(n),
-      accounts: getAccounts(n)
-    }
-  }));
-
 /** @type import('hardhat/config').HardhatUserConfig */
 const hardhatConfig = {
   defaultNetwork: "hardhat",
   networks: {
     hardhat: {},
   },
-  metadata: sfMeta,
-  metanetworks: sfNetworks,
 
   solidity: {
     version: "0.8.17",
@@ -48,6 +54,7 @@ const hardhatConfig = {
       viaIR: true
     }
   },
+
   etherscan: {
     // list supported explorers with: npx hardhat verify --list-networks
     apiKey: {
@@ -67,7 +74,7 @@ const hardhatConfig = {
 // merge the dynamically created network list
 Object.assign(hardhatConfig.networks, ...sfNetworks);
 
-// You may uncomment this in order to print the available networks to console
+// You may uncomment this in order to print the available networks to console on every hardhat invocation
 //console.log("available networks:", Object.keys(hardhatConfig.networks).join(", "));
 
 module.exports = hardhatConfig;

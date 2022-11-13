@@ -1,5 +1,7 @@
 #!/bin/bash -eu
 
+# Deploys FlowNFT and verifies it to/on the network specified as argument
+
 name=${NAME:-"Superfluid Stream"}
 symbol=${SYMBOL:-"SFS"}
 
@@ -15,12 +17,13 @@ fi
 
 echo "network: $network, cfa: $cfa, name: $name, symbol: $symbol"
 
-nftAddr=$(CFA=$cfa NAME="$name" SYMBOL="$symbol" npx hardhat run --network $network scripts/deploy.js | cut -d " " -f 4)
+nftAddr=$(CFA=$cfa NAME="$name" SYMBOL="$symbol" npx hardhat run --network $network scripts/deploy-flownft.js | grep "deployed to" | cut -d " " -f 4)
 
 echo "NFT contract addr: $nftAddr"
 
-# give the explorer some time to index
-sleep 15
+explorerDelay=${EXPLORER_DELAY:-15}
+echo "waiting $explorerDelay seconds to give the explorer some time to index before verifying..."
+sleep $explorerDelay
 
 echo "trying to verify. If it fails, manually retry with this command after waiting a bit more:"
 verifyCmd="npx hardhat verify --network $network $nftAddr $cfa \"$name\" \"$symbol\""
