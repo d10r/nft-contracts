@@ -64,6 +64,17 @@ You may want to verify the first instance deployed on a network on the canonical
 npx hardhat verify --network <network> <instance addr> <cfa addr> <supertoken addr> <receiver addr>
 ```
 
+## UI
+
+There's a simple Dapp for deploying FlowSender721 instances in directory `ui`.
+In order to run locally, you can start a webserver with
+```sh
+python -m SimpleHTTPServer 1337
+```
+then navigate to http://localhost:1337 in a browser.
+
+Or use an IPFS-hosted instance at https://ipfs.io/ipfs/QmNxTTeeoFKeNSpUJ3SfoPqb4n1MTSYQRGSj4oASCYFWMd.
+
 ## Known bugs
 
 FlowNFT:  

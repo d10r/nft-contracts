@@ -1,0 +1,174 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Deploy FlowSender721</title>
+    <meta charset="UTF-8">
+    <script src="https://cdn.jsdelivr.net/npm/ethers@5.5.4/dist/ethers.umd.min.js"
+            integrity="sha256-u2JkA91avqVaE60Vn+iwn8Nh6yQpddB4D6mTLwbEntk="
+            crossorigin="anonymous">
+    </script>
+    <script src="https://code.jquery.com/jquery-3.5.1.slim.min.js"
+            integrity="sha256-4+XzXVhsDmqanXGHaHvgh1gMQKX40OUvDEBTu8JcmNs="
+            crossorigin="anonymous">
+    </script>
+    <style>
+        .header-container {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+
+        .height-fit-content {
+            height: fit-content;
+        }
+    </style>
+</head>
+<body>
+    <div class="outerDiv">
+        <div class="header-container">
+            <h1>Deploy FlowSender721</h1>
+            <h3 id="loader" style="text-align: center; display: none;">Loading...</h3>
+            <button id='connect-wallet-btn' type="button" class="height-fit-content"
+                    onclick="execFuncWithLoader(connectWallet)">
+                connect wallet
+            </button>
+        </div>
+
+        <div>
+            <label for="superTokenAddr">Super Token address:</label><br/>
+            <input id="superTokenAddr" size="40"/><br/>
+            <label for="receiverAddr">Receiver address:</label><br/>
+            <input id="receiverAddr" size="40"/><br/>
+            <button onclick="execFuncWithLoader(deploy)">Deploy</button><br></br>
+            <b><span id="statusMsg"></span></b><br/>
+        </div>
+    </div>
+
+    <script type="module">
+        import networks from "https://cdn.jsdelivr.net/gh/superfluid-finance/metadata/module/networks/index.js";
+
+        const FlowSender721DeployerFactoryAbi = '[{"inputs":[{"internalType":"contract ISuperfluid","name":"host","type":"address"}],"stateMutability":"nonpayable","type":"constructor"},{"anonymous":false,"inputs":[{"indexed":false,"internalType":"contract FlowSender721","name":"deployedAt","type":"address"},{"indexed":true,"internalType":"contract ISuperToken","name":"superToken","type":"address"},{"indexed":true,"internalType":"address","name":"receiver","type":"address"}],"name":"Deployed","type":"event"},{"inputs":[{"internalType":"contract ISuperToken","name":"superToken","type":"address"},{"internalType":"address","name":"receiver","type":"address"}],"name":"deployFor","outputs":[{"internalType":"contract FlowSender721","name":"deployedAt","type":"address"}],"stateMutability":"nonpayable","type":"function"},{"inputs":[{"internalType":"contract ISuperToken","name":"superToken","type":"address"},{"internalType":"address","name":"receiver","type":"address"}],"name":"getAddressFor","outputs":[{"internalType":"address","name":"instanceAddr","type":"address"},{"internalType":"bool","name":"isDeployed","type":"bool"}],"stateMutability":"view","type":"function"}]';
+        const factoryAddr = "0xc245c36dc4fc9d29b5889b8bf2998c52be6cc843";
+
+        let connData = {}; // chainId, provider, userAddress, ...
+
+        // pre-fill input fields from query params if present
+        // example queryString: chainId=42&token=0xE3817a5e3e436a9b114A829C9FCc02355193cf41&sender=0x30B125d5Fc58c1b8E3cCB2F1C71a1Cc847f024eE&receiver=0x38EEcBc486111D9B0DD85Eeb9512AF214705617A
+        const params = new URLSearchParams(window.location.search)
+        connData.wantedChainId = Number(params.get("chainId")); // 0 if undefined
+        $("#superTokenAddr").val(params.get("token"));
+        $("#receiverAddr").val(params.get("receiver"));
+
+        // executes a function and shows a loading UI hint in the meantime
+        window.execFuncWithLoader = async function (func) {
+            $("#loader").toggle();
+            try {
+                await func();
+            } catch (err) {
+                console.error(err);
+            } finally {
+                $("#loader").toggle();
+            }
+        }
+
+        // connects to a browser injected wallet (https://eips.ethereum.org/EIPS/eip-1193)
+        window.connectWallet = async function () {
+            // does nothing if already connected
+            if (!connData.provider) {
+                $("#connect-wallet-btn").text("connecting...");
+                await setAccount();
+
+                if (setNetwork(Number(window.ethereum.chainId))) {
+                    $("#connect-wallet-btn").text(connData.userAddress + " | chain id: " + connData.chainId);
+                } else {
+                    $("#connect-wallet-btn").text("not connected");
+                }
+            }
+        }
+
+        window.setAccount = async function () {
+            const response = await window.ethereum.request({ method: "eth_requestAccounts" });
+            connData.userAddress = response[0];
+        }
+
+        function setNetwork(chainId) {
+            if (connData.wantedChainId !== 0 && chainId !== connData.wantedChainId) {
+                alert(`Wallet NOT connected to a chain with wanted id ${connData.wantedChainId}`);
+                return false;
+            }
+            connData.network = networks.getNetworkByChainId(chainId);
+            if (connData.network === undefined) {
+                alert(`ERR: wallet connected to unsupported network (chainId: ${chainId})`);
+                return false;
+            }
+            connData.chainId = Number(chainId);
+            connData.provider = new ethers.providers.Web3Provider(window.ethereum);
+            if (!window.ethereum) {
+                alert("ERR: no injected ethereum provider found");
+                return false;
+            }
+            return true;
+        }
+
+        // handle network or account changes in wallet after init
+        if (window.ethereum) {
+            window.ethereum.on("accountsChanged", async accounts => {
+                console.log("on accounts changed: ", accounts[0]);
+                connData.userAddress = accounts[0];
+                $("#connect-wallet-btn").text(connData.userAddress + " | chain id: " + connData.chainId);
+            });
+            window.ethereum.on("chainChanged", async chainId => {
+                console.log("chain changed")
+                if (connData.userAddress === undefined) {
+                    await setAccount();
+                }
+                if (setNetwork(Number(chainId))) {
+                    $("#connect-wallet-btn").text(connData.userAddress + " | chain id: " + connData.chainId);
+                } else {
+                    $("#connect-wallet-btn").text("not connected");
+                }
+            });
+        }
+
+        window.deploy = async function () {
+            if(connData.provider === undefined) {
+                alert("no wallet connected");
+                return;
+            }
+
+            const superTokenAddr = $("#superTokenAddr").val();
+            const receiverAddr = $("#receiverAddr").val();
+
+            console.log(`deploy with args: ${superTokenAddr}, ${receiverAddr}`);
+
+            try {
+                window.factory = new ethers.Contract(
+                    factoryAddr,
+                    FlowSender721DeployerFactoryAbi,
+                    connData.provider.getSigner()
+                );
+
+                const { instanceAddr, isDeployed } = await factory.getAddressFor(superTokenAddr, receiverAddr);
+
+                if (isDeployed) {
+                    console.log(`Already deployed at ${instanceAddr}`);
+                    $("#statusMsg").text(`Already deployed at ${instanceAddr}`);
+                } else {
+                    console.log(`Need to deploy - computed address: ${instanceAddr}`);
+                    $("#statusMsg").text(`Precomputed address: ${instanceAddr}`);
+                    const deployTx = await factory.deployFor(superTokenAddr, receiverAddr);
+                    console.log(`Waiting for deploy tx ${deployTx.hash} …`);
+                    $("#statusMsg").text(`Deploying to precomputed address ${instanceAddr} in tx ${deployTx.hash} …`);
+                    window.receipt = await deployTx.wait();
+                    console.log("tx executed!");
+                    $("#statusMsg").text(`Deployed at ${receipt.events[0].args.deployedAt}`);
+                    console.log(`receipt: ${JSON.stringify(receipt, null, 2)}`);
+                }
+            } catch(e) {
+                console.error(`deploy failed with: ${JSON.stringify(e, null, 2)}`);
+                alert(`Error: ${JSON.stringify(e, null, 2)}`);
+            }
+        }
+    </script>
+</body>
+</html>
