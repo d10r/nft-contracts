@@ -40,6 +40,8 @@ The canonical network names as defined in [@superfluid-finance/metadata](https:/
 
 ## Deploy FlowSender721
 
+### Deploy the factory (once per network)
+
 Since a dedicated contract per SuperToken and receiver is required, this contract comes with a factory.  
 The hardhat script [scripts/deploy-fs721factory.js] deploys that factory using [this deterministic deployment proxy](https://github.com/Zoltu/deterministic-deployment-proxy) already available on most relevant public networks at address [0x7A0D94F55792C434d74a40883C6ed8545E406D12](https://blockscan.com/address/0x7A0D94F55792C434d74a40883C6ed8545E406D12).
 
@@ -48,7 +50,17 @@ In order to deploy the factory, do:
 npx hardhat run --network <network> scripts/deploy-fs721factory.js
 ```
 
+This will do a deploy + initialize tx.
+It's 2 steps in order to allow same-address deployment across networks, works if the `factory initializer` address set in the factory constructor remains the same. Defaults to the signer set by hardhat.
+
 For public networks with Superfluid deployment, the needed host address will be fetched from the [superfluid metadata package](https://github.com/superfluid-finance/metadata) injected into the hardhat network config (see [hardhat.config.ts]).
+
+Verify with
+```
+npx hardhat verify --network <network> <factory addr> <factory initializer addr>
+```
+
+### Deploy instance via script
 
 Once the factory is deployed, instances of the FlowSender721 contract can be deployed with:
 ```sh
@@ -64,7 +76,7 @@ You may want to verify the first instance deployed on a network on the canonical
 npx hardhat verify --network <network> <instance addr> <cfa addr> <supertoken addr> <receiver addr>
 ```
 
-## UI
+### Deploy instance via UI
 
 There's a simple Dapp for deploying FlowSender721 instances in directory `ui`.
 In order to run locally, you can start a webserver with
@@ -73,7 +85,11 @@ python -m SimpleHTTPServer 1337
 ```
 then navigate to http://localhost:1337 in a browser.
 
-Or use an IPFS-hosted instance at https://ipfs.io/ipfs/QmNxTTeeoFKeNSpUJ3SfoPqb4n1MTSYQRGSj4oASCYFWMd.
+Or use an IPFS-hosted instance at https://ipfs.io/ipfs/Qme35Ck4XDEmajiuo1jsu9wkcKSAbRfrVjx5huRzZGL8ae.
+
+### Deploy instance via Explorer
+
+
 
 ## Known bugs
 
