@@ -56,7 +56,7 @@ It's 2 steps in order to allow same-address deployment across networks, works if
 For public networks with Superfluid deployment, the needed host address will be fetched from the [superfluid metadata package](https://github.com/superfluid-finance/metadata) injected into the hardhat network config (see [hardhat.config.ts]).
 
 Verify with
-```
+```sh
 npx hardhat verify --network <network> <factory addr> <factory initializer addr>
 ```
 
@@ -85,7 +85,7 @@ python -m SimpleHTTPServer 1337
 ```
 then navigate to http://localhost:1337 in a browser.
 
-Or use an IPFS-hosted instance at https://ipfs.io/ipfs/Qme35Ck4XDEmajiuo1jsu9wkcKSAbRfrVjx5huRzZGL8ae.
+Or use an IPFS-hosted instance at https://ipfs.io/ipfs/QmNrBaHqEmdRLGqSFD76pytyKMvkyvRMZZcYkhRdqkJjzG.
 
 ### Deploy instance via Explorer
 

@@ -86,14 +86,13 @@ contract FlowSender721 {
     // ============= private interface =============
 
     function _getFlowRate(address sender) internal view returns(int96 flowRate) {
-        (,flowRate,,) = _cfaV1.getFlowByID(superToken, _getAgreementId(sender));
+        (,flowRate,,) = _cfaV1.getFlowByID(superToken, _getFlowId(sender));
     }
 
     /// returns the superToken id representing the given flow - constructed like agreementId in CFA
     /// note that this method doesn't check if an actual flow currently exists for this params (flowrate > 0)
-    function _getAgreementId(address sender) public view returns(bytes32 agreementId) {
-        agreementId = keccak256(abi.encodePacked(
-            superToken,
+    function _getFlowId(address sender) internal view returns(bytes32 flowId) {
+        flowId = keccak256(abi.encode(
             sender,
             receiver
         ));

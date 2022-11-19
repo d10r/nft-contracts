@@ -17,7 +17,7 @@ async function main() {
         throw "not all needed ENV vars (SUPERTOKEN, RECEIVER) set"
     }
 
-    const factoryAddr = process.env.FACTORY || "0x04b4cd83d925e672580f44ef1aeddc68726c737d";
+    const factoryAddr = process.env.FACTORY || "0x1c3fb32f41e3825ba38395e22bfee9be56d58dd9";
 
     const Factory = await hre.ethers.getContractFactory("FlowSender721Factory");
     const factory = Factory.attach(factoryAddr);
