@@ -82,3 +82,10 @@ Object.assign(hardhatConfig.networks, ...sfNetworks);
 module.exports = hardhatConfig;
 
 export default config;
+
+// hardhat task to list public networks with Superfluid deployment
+task("sf-networks", "list supported networks").setAction(
+  async (taskArgs, hre) => {
+    console.log("available networks:\n", sfMeta.networks.map(n => n.name));
+  }
+);
