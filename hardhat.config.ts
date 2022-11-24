@@ -76,9 +76,13 @@ const hardhatConfig = {
 // merge the dynamically created network list
 Object.assign(hardhatConfig.networks, ...sfNetworks);
 
-// You may uncomment this in order to print the available networks to console on every hardhat invocation
-//console.log("available networks:", Object.keys(hardhatConfig.networks).join(", "));
-
 module.exports = hardhatConfig;
 
 export default config;
+
+// hardhat task to list public networks with Superfluid deployment
+task("sf-networks", "list supported networks").setAction(
+  async (taskArgs, hre) => {
+    console.log("available networks:\n", sfMeta.networks.map(n => n.name));
+  }
+);
